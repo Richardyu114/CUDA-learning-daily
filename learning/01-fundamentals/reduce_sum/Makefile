@@ -1,14 +1,18 @@
 NVCC ?= nvcc
 CXXFLAGS := -O3 -std=c++17
-TARGET := reduce_sum
+TARGETS := reduce_sum reduce_sum_opt
 
-all: $(TARGET)
+all: $(TARGETS)
 
-$(TARGET): reduce_sum.cu
+reduce_sum: reduce_sum.cu
 	$(NVCC) $(CXXFLAGS) $< -o $@
 
-run: $(TARGET)
-	./$(TARGET)
+reduce_sum_opt: reduce_sum_opt.cu
+	$(NVCC) $(CXXFLAGS) $< -o $@
+
+run: all
+	./reduce_sum
+	./reduce_sum_opt
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGETS)

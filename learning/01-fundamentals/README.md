@@ -21,3 +21,8 @@ cd learning/01-fundamentals/reduce_sum && make && ./reduce_sum
 ```bash
 bash scripts/run_bench.sh
 ```
+
+对比 reduce baseline vs optimized（含 speedup）：
+```bash
+bash scripts/compare_reduce.sh
+```

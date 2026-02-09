@@ -31,11 +31,17 @@ echo "\n===== SAXPY =====" | tee -a "$OUT"
   ./saxpy
 ) | tee -a "$OUT"
 
-echo "\n===== REDUCE_SUM =====" | tee -a "$OUT"
+echo "\n===== REDUCE_SUM (BASE + OPT) =====" | tee -a "$OUT"
 (
   cd "$ROOT_DIR/learning/01-fundamentals/reduce_sum"
   make
   ./reduce_sum
+  ./reduce_sum_opt
+) | tee -a "$OUT"
+
+echo "\n===== REDUCE SPEEDUP =====" | tee -a "$OUT"
+(
+  bash "$ROOT_DIR/scripts/compare_reduce.sh"
 ) | tee -a "$OUT"
 
 echo "\nDone. Raw bench saved to: $OUT"
