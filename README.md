@@ -186,6 +186,13 @@ CUDA-learning-daily/
 3. 同时在 `docs/architecture-notes/` 建立 Hopper 特性笔记
 4. 等 GEMM 路线稳定后推进 `07-flash-attention`
 
+当前已落地骨架（Stage-1）：
+- `kernels/gemm/bf16_gemm_naive.cu`
+- `kernels/gemm/bf16_gemm_tiled.cu`
+- `kernels/attention/flash_attn_fwd_baseline.cu`
+- `tests/numeric/flash_attn_ref.py`
+- `scripts/run_kernels_stage1.sh`
+
 ---
 
 ## License
