@@ -1,163 +1,190 @@
 # CUDA Learning Daily
 
-> 从零系统学习 CUDA Kernel 的日更仓库（Plan + Notes + Code + Bench）。
-
-## 目标（8 周）
-
-- 从基础 CUDA 编程模型走到可读写高性能 kernel
-- 建立“**实现 -> 验证 -> benchmark -> 复盘**”的固定训练闭环
-- 完成一组可展示的 mini kernels（含性能对比与优化记录）
+> 目标导向版 CUDA Kernel 学习仓库：最终能独立实现 **Flash-Attention / BF16 GEMM / Quant Attn+GEMM**，并能针对 **Hopper -> Blackwell -> Rubin(后续)** 做架构化优化。
 
 ---
 
-## 学习路线（Refined Plan）
+## North Star（最终能力）
 
-### Phase 0 — 环境与方法（Day 1~2）
-- [ ] 配置 CUDA 开发环境（驱动、nvcc、nvidia-smi）
-- [ ] 跑通第一个 kernel（vector add）
-- [ ] 建立 benchmark 基线（包含 CPU 对照）
-- [ ] 固定记录模板（问题、假设、实验、结论）
+你最终要达到的不是“会写几个 demo kernel”，而是：
 
-### Phase 1 — CUDA 基础与正确性（Week 1~2）
-- [ ] thread/block/grid 索引与边界处理
-- [ ] host/device memory 管理与 memcpy
-- [ ] kernel launch 配置与 occupancy 初步理解
-- [ ] error check 与单元测试习惯
-
-**交付物**
-- [ ] `vector_add`
-- [ ] `saxpy`
-- [ ] `reduce_sum`（基础版）
-
-### Phase 2 — Memory-Centric 优化（Week 3~4）
-- [ ] global memory coalescing
-- [ ] shared memory 基本模式（tiling）
-- [ ] bank conflict 识别与规避
-- [ ] pinned memory / async copy / stream 基础
-
-**交付物**
-- [ ] `matmul_naive` vs `matmul_tiled`
-- [ ] `transpose_naive` vs `transpose_optimized`
-
-### Phase 3 — 并行模式与性能分析（Week 5~6）
-- [ ] reduction 优化套路（unroll、warp-level）
-- [ ] prefix sum / scan（可选）
-- [ ] warp divergence 分析
-- [ ] 用 Nsight Systems / Nsight Compute 做瓶颈定位
-
-**交付物**
-- [ ] `reduce_sum_optimized`
-- [ ] 至少 2 份 profile 报告 + 复盘文档
-
-### Phase 4 — 实战与可迁移能力（Week 7~8）
-- [ ] 选 1~2 个真实场景 kernel（如 softmax / layernorm 简化版）
-- [ ] 写出可复现 benchmark（输入规模、GPU 型号、配置）
-- [ ] 总结优化 checklist（下次新 kernel 可复用）
-
-**交付物**
-- [ ] 1 个“从 baseline 到优化版”的完整案例
-- [ ] Final report（思路、曲线、教训、下一步）
+1. 能从数学与访存角度设计 kernel（不是只会改参数）
+2. 能做端到端验证：正确性、吞吐、延迟、稳定性、可复现
+3. 能按架构特性做实现分层（sm80/sm90/sm100+）
+4. 能把优化方法沉淀成模板，迁移到新算子
 
 ---
 
-## 每日最小闭环（Daily Loop）
+## 12~20 周学习地图（Refined）
 
-每天至少完成以下 4 件事：
+> 时间可伸缩：每周 5~10h 偏 20 周；每周 15~20h 可压到 12~14 周。
 
-1. **实现**：写一个最小可运行 kernel / 优化点
-2. **验证**：和 CPU 或 reference 对比正确性
-3. **测试**：记录关键指标（时间、吞吐、占用）
-4. **复盘**：写下今天有效/无效的假设与原因
+### Stage A — 基础打牢（Week 1~3）
+- CUDA execution model、memory hierarchy、同步语义
+- 建立 benchmark/verify 工具链（你已经开始了）
+- 完成基础 kernel：vector_add / saxpy / reduce（base + optimized）
 
-> 建议：每天保证一个小而完整的“可提交增量”，避免只看资料不落地。
+**退出条件**
+- [ ] 能稳定跑 benchmark 并记录结果
+- [ ] 能解释至少 3 类常见性能瓶颈（带宽、占用、分歧）
+
+### Stage B — GEMM 路线（Week 4~8）
+- naive GEMM -> tiled shared GEMM -> vectorized load/store
+- Tensor Core 路线：BF16 输入、FP32 accumulate
+- 尝试 epilogue fusion（bias/activation）
+
+**交付物**
+- [ ] `gemm_naive`
+- [ ] `gemm_tiled`
+- [ ] `gemm_bf16_tensorcore`
+- [ ] 与 cuBLAS 的基线对比（至少 2~3 个 shape）
+
+### Stage C — Flash-Attention 路线（Week 9~13）
+- online softmax
+- block-wise QK^T + softmax + PV
+- causal/non-causal 两模式
+- 混合精度（fp16/bf16 in, fp32 acc）
+
+**交付物**
+- [ ] Flash-Attention forward kernel（先 correctness）
+- [ ] 性能对比（PyTorch SDPA / flash-attn baseline）
+- [ ] 至少 1 版优化迭代说明（profile 证据）
+
+### Stage D — Quantized Kernel 路线（Week 14~17）
+- int8/fp8（按硬件能力）量化路径
+- scale/zero-point 策略（per-tensor/per-channel）
+- dequant + matmul / attention 融合
+
+**交付物**
+- [ ] quant GEMM baseline
+- [ ] quant attention baseline
+- [ ] 准确性与吞吐权衡报告
+
+### Stage E — 架构专项（Week 18+）
+- Hopper 特性优先：WGMMA / TMA / async pipeline
+- Blackwell 特性跟进：迁移与重调优
+- Rubin（后续公开信息）持续跟踪
+
+**交付物**
+- [ ] Hopper-specific kernel 版本
+- [ ] architecture tuning checklist
+- [ ] 同一 workload 的跨架构性能对比表
 
 ---
 
-## 仓库结构
+## 你要做的 3 条主线（并行推进）
+
+### 主线 1：Kernel 实现线
+按 `baseline -> optimized -> architecture-specific` 推进。
+
+### 主线 2：验证与基准线
+每个 kernel 必带：
+- 正确性对照（CPU/reference）
+- 固定 shape 套件
+- profile 证据（ncu/nsys）
+
+### 主线 3：架构与文档线
+每次优化写清：
+- 为什么有效（访存/指令/并发）
+- 在哪类 shape 最有效
+- 在哪个架构收益最大
+
+---
+
+## 仓库结构（升级版）
 
 ```text
 CUDA-learning-daily/
 ├── README.md
 ├── learning/
-│   ├── 00-setup/               # 环境配置与工具检查
-│   ├── 01-fundamentals/        # thread/block/grid, memory basics
-│   ├── 02-memory-optimization/ # coalescing/shared-memory/bank-conflict
-│   ├── 03-parallel-patterns/   # reduction/scan/warp-level
-│   ├── 04-profiling/           # Nsight 结果与分析
-│   └── 05-projects/            # 实战 mini project
-├── notes/
-│   ├── daily/                  # 日更学习日志
-│   └── weekly/                 # 周复盘
+│   ├── 00-setup/
+│   ├── 01-fundamentals/
+│   ├── 02-memory-optimization/
+│   ├── 03-parallel-patterns/
+│   ├── 04-profiling/
+│   ├── 05-projects/
+│   ├── 06-bf16-gemm/             # BF16 / Tensor Core GEMM 路线
+│   ├── 07-flash-attention/       # Flash-Attention 路线
+│   ├── 08-quant-kernels/         # Quant GEMM/Attn 路线
+│   ├── 09-arch-hopper/           # Hopper 特性专项
+│   └── 10-arch-blackwell-rubin/  # Blackwell + 后续架构专项
+├── kernels/
+│   ├── gemm/                     # 统一放置 GEMM kernels
+│   ├── attention/                # 统一放置 attention kernels
+│   └── quant/                    # 统一放置 quant kernels
+├── tests/
+│   ├── unit/                     # 小规模功能正确性
+│   ├── numeric/                  # 数值精度/误差边界
+│   └── perf/                     # 固定shape性能回归
 ├── benchmarks/
-│   ├── raw/                    # 原始结果数据
-│   └── reports/                # 汇总图表/分析
+│   ├── raw/                      # 原始 benchmark 输出
+│   └── reports/                  # 可读报告
+├── profiler/
+│   ├── ncu/                      # Nsight Compute capture/notes
+│   └── nsys/                     # Nsight Systems capture/notes
+├── docs/
+│   ├── architecture-notes/       # 架构特性笔记
+│   └── playbooks/                # 调优套路沉淀
+├── notes/
+│   ├── daily/
+│   └── weekly/
 └── scripts/
-    └── env_check.sh            # 基础环境检查脚本
+    ├── env_check.sh
+    ├── run_bench.sh
+    └── compare_reduce.sh
 ```
 
 ---
 
-## 建议里程碑（可打勾）
+## 每周输出要求（强约束）
 
-### Milestone A（第 2 周末）
-- [ ] 完成 3 个基础 kernel
-- [ ] 有统一 benchmark 框架
-- [ ] 能解释 block size 对性能的影响（初步）
-
-### Milestone B（第 4 周末）
-- [ ] 完成 matmul/transpose 的 naive vs optimized 对比
-- [ ] 能清楚说明 coalescing 与 shared memory 的收益来源
-
-### Milestone C（第 6 周末）
-- [ ] reduction 达到明显加速（相对 baseline）
-- [ ] 掌握至少一种 profile 工具的核心视图
-
-### Milestone D（第 8 周末）
-- [ ] 形成 1 个可展示案例（含图和结论）
-- [ ] 输出个人 CUDA kernel 优化 checklist
+每周至少交付：
+1. 1 个可运行 kernel 增量
+2. 1 份 benchmark 记录（raw + report）
+3. 1 条 profile 证据（截图或关键 metric）
+4. 1 条“失败尝试与教训”
 
 ---
 
-## Daily Note 模板（建议）
+## 关键指标（KPI）
 
-可复制到 `notes/daily/YYYY-MM-DD.md`：
-
-```md
-# YYYY-MM-DD
-
-## 今日目标
-- 
-
-## 实现内容
-- 
-
-## 正确性验证
-- 输入：
-- 对照：
-- 结论：
-
-## 性能结果
-- GPU：
-- 问题规模：
-- baseline：
-- current：
-- speedup：
-
-## 关键观察
-- 
-
-## 明日计划
-- 
-```
+- **Correctness**：误差是否在预期范围（不同 dtype 分开记录）
+- **Performance**：kernel time / TFLOPS / GBps / speedup
+- **Stability**：多次运行抖动（P50/P90）
+- **Portability**：跨架构迁移后的性能保留率
 
 ---
 
-## 使用建议
+## 里程碑（面向你的最终目标）
 
-- 先追求正确，再追求快
-- 一次只改一个变量（如 block size / memory layout）
-- 所有“感觉更快”的结论都要有数据
-- 失败实验也写下来，价值很高
+### Milestone M1（基础完成）
+- [ ] Fundamentals 全部可复现
+- [ ] 有统一 benchmark 与报告格式
+
+### Milestone M2（BF16 GEMM 可用）
+- [ ] 有 BF16 Tensor Core GEMM 可运行版本
+- [ ] 对比 cuBLAS 有明确差距认知与优化方向
+
+### Milestone M3（Flash-Attention 可用）
+- [ ] Forward kernel 正确 + 有性能数据
+- [ ] 至少一轮优化并有 profile 支撑
+
+### Milestone M4（Quant Kernel 初版）
+- [ ] Quant GEMM / Quant Attention 都有 baseline
+- [ ] 有精度-性能 tradeoff 报告
+
+### Milestone M5（架构专项）
+- [ ] Hopper 特性落地至少 1 个案例
+- [ ] Blackwell/Rubin 跟进机制建立（feature matrix + tuning notes）
+
+---
+
+## 推荐执行顺序（今天就能继续）
+
+1. 继续完善 `01-fundamentals` 的 benchmark 稳定性
+2. 开始 `06-bf16-gemm`：先做 naive/tiled，再切 Tensor Core
+3. 同时在 `docs/architecture-notes/` 建立 Hopper 特性笔记
+4. 等 GEMM 路线稳定后推进 `07-flash-attention`
 
 ---
 
